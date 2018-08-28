@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -14,6 +15,7 @@ namespace PusherServer.RestfulClient
         private readonly string _libraryName;
         private readonly string _version;
         private readonly HttpClient _httpClient;
+        private readonly WebClient _webClient;
 
         /// <summary>
         /// Constructs a new instance of the PusherRestClient
@@ -22,7 +24,7 @@ namespace PusherServer.RestfulClient
         /// <param name="libraryName"></param>
         /// <param name="version"></param>
         public PusherRestClient(string baseAddress, string libraryName, Version version) : this(new Uri(baseAddress), libraryName, version)
-        {}
+        { }
 
         /// <summary>
         /// Constructs a new instance of the PusherRestClient
@@ -35,15 +37,23 @@ namespace PusherServer.RestfulClient
             _httpClient = new HttpClient { BaseAddress = baseAddress };
             _libraryName = libraryName;
             _version = version.ToString(3);
+
             _httpClient.DefaultRequestHeaders.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.DefaultRequestHeaders.Add("Pusher-Library-Name", _libraryName);
             _httpClient.DefaultRequestHeaders.Add("Pusher-Library-Version", _version);
+
+            _webClient = new WebClient() { BaseAddress = baseAddress.ToString() };
+            _webClient.Headers.Clear();
+            _webClient.Headers["Accept"] = "application/json";
+            _webClient.Headers["Pusher-Library-Name"] = _libraryName;
+            _webClient.Headers["Pusher-Library-Version"] = _version;
         }
 
         ///<inheritDoc/>
-        public Uri BaseUrl {
-            get { return _httpClient.BaseAddress; } 
+        public Uri BaseUrl
+        {
+            get { return _httpClient.BaseAddress; }
         }
 
         ///<inheritDoc/>
@@ -61,6 +71,20 @@ namespace PusherServer.RestfulClient
         }
 
         ///<inheritDoc/>
+        public GetResult<T> ExecuteGet<T>(IPusherRestRequest pusherRestRequest)
+        {
+            if (pusherRestRequest.Method == PusherMethod.GET)
+            {
+                _webClient.Headers.Remove("Content-Type");
+                var responseContent = _webClient.DownloadString(pusherRestRequest.ResourceUri);
+
+                return new GetResult<T>(new HttpResponseMessage() { Content = new StringContent(responseContent), StatusCode = HttpStatusCode.OK }, responseContent);
+            }
+
+            return null;
+        }
+
+        ///<inheritDoc/>
         public async Task<TriggerResult> ExecutePostAsync(IPusherRestRequest pusherRestRequest)
         {
             if (pusherRestRequest.Method == PusherMethod.POST)
@@ -71,6 +95,23 @@ namespace PusherServer.RestfulClient
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 return new TriggerResult(response, responseContent);
+            }
+
+            return null;
+        }
+
+        ///<inheritDoc/>
+        public TriggerResult ExecutePost(IPusherRestRequest pusherRestRequest)
+        {
+            if (pusherRestRequest.Method == PusherMethod.POST)
+            {
+                var content = new StringContent(pusherRestRequest.GetContentAsJsonString(), Encoding.UTF8, "application/json");
+
+                _webClient.Headers["Content-Type"] = "application/json";
+                var responseContent = _webClient.UploadString(pusherRestRequest.ResourceUri, "POST", pusherRestRequest.GetContentAsJsonString());
+
+                return new TriggerResult(new HttpResponseMessage() { Content = new StringContent(responseContent), StatusCode = HttpStatusCode.OK }, responseContent);
+
             }
 
             return null;

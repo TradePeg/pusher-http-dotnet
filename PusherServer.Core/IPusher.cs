@@ -37,6 +37,33 @@ namespace PusherServer
         Task<ITriggerResult> TriggerAsync(Event[] events);
 
         /// <summary>
+        /// Triggers an event on the specified channels in the background.
+        /// </summary>
+        /// <param name="channelName">The name of the channel to trigger the event on</param>
+        /// <param name="eventName">The name of the event.</param>
+        /// <param name="data">The data to be sent with the event. The event payload.</param>
+        /// <param name="options">Additional options to be used when triggering the event. See <see cref="ITriggerOptions" />.</param>
+        /// <returns>The result of the call to the REST API</returns>
+        ITriggerResult Trigger(string channelName, string eventName, object data, ITriggerOptions options = null);
+
+        /// <summary>
+        /// Triggers an event on the specified channels in the background.
+        /// </summary>
+        /// <param name="channelNames">The channels to trigger the event on</param>
+        /// <param name="eventName">The name of the event.</param>
+        /// <param name="data">The data to be sent with the event. The event payload.</param>
+        /// <param name="options">(Optional)Additional options to be used when triggering the event. See <see cref="ITriggerOptions" />.</param>
+        /// <returns>The result of the call to the REST API</returns>
+        ITriggerResult Trigger(string[] channelNames, string eventName, object data, ITriggerOptions options = null);
+
+        /// <summary>
+        /// Triggers the events in the passed in array asynchronously
+        /// </summary>
+        /// <param name="events">The events to trigger</param>
+        /// <returns>The result of the call to the REST API</returns>
+        ITriggerResult Trigger(Event[] events);
+
+        /// <summary>
         /// Authenticates the subscription request for a private channel.
         /// </summary>
         /// <param name="channelName">Name of the channel to be authenticated.</param>

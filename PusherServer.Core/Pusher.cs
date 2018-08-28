@@ -44,7 +44,7 @@ namespace PusherServer
                 Attribute attr = typeof(Pusher).GetTypeInfo().Assembly.GetCustomAttribute(typeof(AssemblyProductAttribute));
 
                 AssemblyProductAttribute adAttr = (AssemblyProductAttribute)attr;
-                
+
                 return adAttr.Product;
             }
         }
@@ -115,6 +115,47 @@ namespace PusherServer
             return result;
         }
 
+        /// <inheritdoc/>
+        public ITriggerResult Trigger(string channelName, string eventName, object data, ITriggerOptions options = null)
+        {
+            return Trigger(new[] { channelName }, eventName, data, options);
+        }
+
+        /// <inheritdoc/>
+        public ITriggerResult Trigger(string[] channelNames, string eventName, object data, ITriggerOptions options = null)
+        {
+            if (options == null)
+                options = new TriggerOptions();
+
+            var bodyData = CreateTriggerBody(channelNames, eventName, data, options);
+
+            var request = _factory.Build(PusherMethod.POST, "/events", requestBody: bodyData);
+
+            DebugTriggerRequest(request);
+
+            var result = _options.RestClient.ExecutePost(request);
+
+            DebugTriggerResponse(result);
+
+            return result;
+        }
+
+        ///<inheritDoc/>
+        public ITriggerResult Trigger(Event[] events)
+        {
+            var bodyData = CreateBatchTriggerBody(events);
+
+            var request = _factory.Build(PusherMethod.POST, "/batch_events", requestBody: bodyData);
+
+            DebugTriggerRequest(request);
+
+            var result = _options.RestClient.ExecutePost(request);
+
+            DebugTriggerResponse(result);
+
+            return result;
+        }
+
         private TriggerBody CreateTriggerBody(string[] channelNames, string eventName, object data, ITriggerOptions options)
         {
             ValidationHelper.ValidateChannelNames(channelNames);
@@ -138,7 +179,7 @@ namespace PusherServer
         private BatchTriggerBody CreateBatchTriggerBody(Event[] events)
         {
             ValidationHelper.ValidateBatchEvents(events);
-            
+
             var batchEvents = events.Select(e => new BatchEvent
             {
                 name = e.EventName,
@@ -162,7 +203,7 @@ namespace PusherServer
         ///<inheritDoc/>
         public IAuthenticationData Authenticate(string channelName, string socketId, PresenceChannelData presenceData)
         {
-            if(presenceData == null)
+            if (presenceData == null)
             {
                 throw new ArgumentNullException(nameof(presenceData));
             }
